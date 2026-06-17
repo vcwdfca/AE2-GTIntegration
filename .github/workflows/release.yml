@@ -28,5 +28,5 @@ jobs:
 
       - uses: ncipollo/release-action@v1.21.0
         with:
-          artifacts: "build/libs/*"
+          artifacts: "build/libs/*.jar"
           generateReleaseNotes: true

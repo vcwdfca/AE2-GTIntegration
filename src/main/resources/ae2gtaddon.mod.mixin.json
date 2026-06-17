@@ -1,0 +1,21 @@
+{
+	"required": true,
+	"package": "com.formlessDragon.ae2gtaddon.mixin.mod",
+	"plugin": "com.formlessDragon.ae2gtaddon.ModMixinConfigPlugin",
+	"compatibilityLevel": "JAVA_8",
+	"target": "@env(MOD)",
+	"client": [
+		"hei.MixinPatternEncodingRecipeTransferHandler",
+		"ae2.MixinProcessingEncodingPanel"
+	],
+	"mixins": [
+		"ae2.MixinContainerPatternEncodingTerm",
+		"ae2.MixinEncodingModePanel",
+		"ae2.MixinPatternProviderP2PTunnelPart",
+		"ae2.MixinPatternProviderLogic",
+		"ae2.MixinPseudoPatternDetails"
+	],
+	"server": [],
+	"setSourceFile": true,
+	"minVersion": "0.8.7"
+}

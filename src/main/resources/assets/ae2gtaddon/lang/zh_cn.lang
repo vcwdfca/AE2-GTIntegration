@@ -1,0 +1,10 @@
+# Item
+item.ae2gtaddon.circuit_card.name=电路卡
+
+# Tooltips
+gui.tooltips.ae2gtaddon.IgnoreCircuitHeiImport=HEI 电路导入
+gui.tooltips.ae2gtaddon.IgnoreCircuitHeiImportOff=导入处理样板时保留集成电路。
+gui.tooltips.ae2gtaddon.IgnoreCircuitHeiImportOn=导入处理样板时忽略集成电路。
+
+# Others
+itemGroup.ae2gtaddon=AE2-GT集成

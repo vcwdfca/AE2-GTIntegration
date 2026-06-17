@@ -39,11 +39,26 @@ configurations {
     implementation.extendsFrom(contain)
     modCompileOnly
     compileOnly.extendsFrom(modCompileOnly)
+    testCompileOnly.extendsFrom(compileOnly)
     modRuntimeOnly
     runtimeOnly.extendsFrom(modRuntimeOnly)
+    testRuntimeOnly.extendsFrom(runtimeOnly)
 }
 
 def remapTaskName = enable_shadow.toBoolean() ? "remapShadowJar" : "remapJar"
+def gtceuMappingsJar = layout.projectDirectory.file(".gradle/unimined/local/mappings/srg2mcp.jar")
+def gtceuMappingsSrg = layout.projectDirectory.file(".gradle/unimined/local/mappings/srg2mcp.tsrg")
+def gtceuMappingsCsvDir = layout.buildDirectory.dir("gtceu/mcp-csv")
+def prepareGtceuDevMappings = tasks.register("prepareGtceuDevMappings", Copy) {
+    from({ zipTree(gtceuMappingsJar.asFile) }) {
+        include "fields.csv", "methods.csv"
+    }
+    into(gtceuMappingsCsvDir)
+}
+
+tasks.matching { it.name == 'runClient' || it.name == 'runServer' }.configureEach {
+    dependsOn(prepareGtceuDevMappings)
+}
 
 //noinspection GroovyAssignabilityCheck
 unimined.minecraft {
@@ -59,7 +74,9 @@ unimined.minecraft {
         }
         loader "0.5.14-alpha"
         runs.all {
-            systemProperty("crl.dev.mixin", "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json")
+            systemProperty("crl.dev.mixin", "${mod_id}.mod.mixin.json")
+            systemProperty("net.minecraftforge.gradle.GradleStart.srg.notch-srg", gtceuMappingsSrg.asFile.absolutePath)
+            systemProperty("net.minecraftforge.gradle.GradleStart.csvDir", gtceuMappingsCsvDir.get().asFile.absolutePath)
             args += ['--username', minecraft_username]
             def extraArgs = extra_jvm_args
             if (extraArgs != null && !extraArgs.trim().isEmpty()) {
@@ -105,31 +122,63 @@ dependencies {
 
 apply from: 'gradle/scripts/dependencies.gradle'
 
+def generatedTagsSourceDir = layout.buildDirectory.dir('generated/sources/tags/java')
+def tagsPackage = "${root_package}.ae2gtaddon"
+def generateTagsSource = tasks.register('generateTagsSource') {
+def outputFile = generatedTagsSourceDir.map { it.file("${tagsPackage.replace('.', '/')}/Tags.java") }
+
+    inputs.property('mod_id', mod_id)
+    inputs.property('mod_name', mod_name)
+    inputs.property('mod_version', mod_version)
+    outputs.file(outputFile)
+
+    doLast {
+        def file = outputFile.get().asFile
+        delete generatedTagsSourceDir
+        file.parentFile.mkdirs()
+        file.text = """package ${tagsPackage};
+
+public final class Tags {
+
+    public static final String MOD_ID = "${mod_id}";
+    public static final String MOD_NAME = "${mod_name}";
+    public static final String VERSION = "${mod_version}";
+
+    private Tags() {
+    }
+}
+"""
+    }
+}
+
 processResources {
     rename '(.+_at.cfg)', 'META-INF/$1'
+    def resourceProps = [
+            mod_id                  : mod_id,
+            mod_name                : mod_name,
+            mod_version             : mod_version,
+            mod_description         : mod_description,
+            mod_authors             : mod_authors.split(',').findAll { !it.isBlank() }.collect { it.strip() }.join('", "'),
+            mod_credits             : mod_credits,
+            mod_url                 : mod_url,
+            mod_update_json         : mod_update_json,
+            mod_logo_path           : mod_logo_path,
+    ]
+    inputs.properties(resourceProps)
+    filesMatching(['mcmod.info', 'pack.mcmeta']) {
+        expand(resourceProps)
+    }
 }
 
 sourceSets {
     main {
-        blossom {
-            javaSources {
-                property('mod_id', mod_id)
-                property('mod_name', mod_name)
-                property('mod_version', mod_version)
-                property('package', "${root_package}.${mod_id}")
-            }
-            resources {
-                property('mod_id', mod_id)
-                property('mod_name', mod_name)
-                property('mod_version', mod_version)
-                property('mod_description', mod_description)
-                property('mod_authors', mod_authors.toString().split(',').findAll { !it.isBlank() }.collect { "\"${it.strip()}\"" }.join(', '))
-                property('mod_credits', mod_credits)
-                property('mod_url', mod_url)
-                property('mod_update_json', mod_update_json)
-                property('mod_logo_path', mod_logo_path)
-            }
+        java {
+            srcDir generatedTagsSourceDir
         }
+    }
+    test {
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
     }
 }
 
@@ -167,7 +216,12 @@ if (!enable_shadow.toBoolean()) {
 }
 
 compileJava {
+    dependsOn(generateTagsSource)
     sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
+}
+
+tasks.named('sourcesJar').configure {
+    dependsOn(generateTagsSource)
 }
 
 jar {
@@ -182,7 +236,7 @@ jar {
         manifest {
             def attribute_map = [:]
             attribute_map['ModType'] = "CRL"
-            attribute_map['MixinConfigs'] = "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json"
+            attribute_map['MixinConfigs'] = "${mod_id}.mod.mixin.json"
             if (configurations.contain.size() > 0) {
                 attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
                 attribute_map['NonModDeps'] = true
@@ -220,6 +274,7 @@ tasks.named(remapTaskName).configure {
 }
 
 compileTestJava {
+    dependsOn(generateTagsSource)
     sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
 }
 

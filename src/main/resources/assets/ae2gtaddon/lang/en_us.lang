@@ -1,0 +1,10 @@
+# Item
+item.ae2gtaddon.circuit_card.name=Circuit Card
+
+# Tooltips
+gui.tooltips.ae2gtaddon.IgnoreCircuitHeiImport=HEI Circuit Import
+gui.tooltips.ae2gtaddon.IgnoreCircuitHeiImportOff=Keep integrated circuits when importing processing patterns.
+gui.tooltips.ae2gtaddon.IgnoreCircuitHeiImportOn=Ignore integrated circuits when importing processing patterns.
+
+# Others
+itemGroup.ae2gtaddon=AE2-GTIntergration
